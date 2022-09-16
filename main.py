@@ -16,21 +16,22 @@ def initialization_of_population(size):
 
 def fitness_score(population):
     scores = []
+    scoresSorted = []
     for chromosome in population:
         score = (chromosome[0] ** 2 + chromosome[1] - 11) ** 2 + (chromosome[0] + chromosome[1] ** 2 - 7) ** 2
         scores.append(score)
-    # scores, pop = np.array(scores), np.array(population.copy())
-    # inds = np.argsort(scores)
-    # scores = list(scores[inds][::-1])
-    # pop = list(pop[inds, :][::-1])
-    return scores, population
+        scoresSorted.append(1.0 / (score + 0.01))
+    scoresSorted = np.array(scoresSorted)
+    inds = np.argsort(scoresSorted)
+    scoresSorted = list(scoresSorted[inds][::1])
+    return scores, population, scoresSorted
 
 
 def selection(scores, pop_after_fit):
     population_nextgen = []
     # elitism
-    # population_nextgen.append(pop_after_fit[0].copy())
-    for i in range(0, len(pop_after_fit)):
+    population_nextgen.append(pop_after_fit[np.argmin(scores)].copy())
+    for i in range(1, len(pop_after_fit)):
         for j in range(2):
             challenger1 = random.randint(0, len(pop_after_fit) - 1)
             challenger2 = random.randint(0, len(pop_after_fit) - 1)
@@ -38,6 +39,8 @@ def selection(scores, pop_after_fit):
                 population_nextgen.append(pop_after_fit[challenger1])
             else:
                 population_nextgen.append(pop_after_fit[challenger2])
+    for i in range(0, 10):
+        population_nextgen.append((((np.random.rand(2) - 0.5) * 2.0) * 5.0))
     return population_nextgen
 
 
@@ -77,7 +80,7 @@ def generation(sz, mutation_rate, n_gen):
 
     for i in tqdm(range(n_gen)):
         # check fitness
-        scores, population_after_fit = fitness_score(population_nextgen)
+        scores, population_after_fit, sortedScores = fitness_score(population_nextgen)
         # selection
         population_selection = selection(scores, population_after_fit)
         # crossover
@@ -85,13 +88,15 @@ def generation(sz, mutation_rate, n_gen):
         # mutation
         population_nextgen = mutation(pop_after_cross, mutation_rate, sz)
 
-        scores, population_after_fit = fitness_score(population_nextgen)
+        scores, population_after_fit, sortedScores = fitness_score(population_nextgen)
         stored_points.append(population_after_fit)
         best_chromosome.append(population_after_fit[0].copy())
+
         best_score.append(scores[0].copy())
-        stats_min[i] = np.min(scores)
-        stats_max[i] = np.amax(scores)
-        stats_avg[i] = np.mean(scores)
+
+        stats_min[i] = np.min(sortedScores)
+        stats_max[i] = np.amax(sortedScores)
+        stats_avg[i] = np.mean(sortedScores)
     return best_chromosome, best_score, stats_min, stats_avg, stats_max, stored_points
 
 
@@ -99,9 +104,6 @@ s = 100
 generations = 100
 chromosome, score, stats_min, stats_avg, stats_max, stored_points = generation(sz=s, mutation_rate=0.05,
                                                                                n_gen=generations)
-
-print(score)
-print(chromosome)
 
 # plotting
 plt.plot(stats_min, "r")
